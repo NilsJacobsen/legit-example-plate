@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
+import { DiffMatchPatch } from 'diff-match-patch-ts';
 import { cn } from '@/lib/utils';
 
 interface Commit {
@@ -25,7 +26,7 @@ interface TimelineProps {
 }
 
 /**
- * Calculate character differences between two content strings.
+ * Calculate character differences between two markdown strings using diff-match-patch.
  * Returns the number of characters added and deleted.
  */
 function calculateDiff(oldContent: string, newContent: string): { added: number; deleted: number } {
@@ -37,65 +38,54 @@ function calculateDiff(oldContent: string, newContent: string): { added: number;
     return { added: 0, deleted: oldContent.length };
   }
   
-  // Normalize JSON content for comparison
-  try {
-    const oldStr = JSON.stringify(JSON.parse(oldContent));
-    const newStr = JSON.stringify(JSON.parse(newContent));
-    
-    if (oldStr === newStr) {
-      return { added: 0, deleted: 0 };
-    }
-    
-    const lengthDiff = newStr.length - oldStr.length;
-    
-    if (lengthDiff > 0) {
-      return { added: lengthDiff, deleted: 0 };
-    } else if (lengthDiff < 0) {
-      return { added: 0, deleted: Math.abs(lengthDiff) };
-    } else {
-      // Same length but different content
-      const estimated = Math.ceil(Math.max(oldStr.length, newStr.length) * 0.1);
-      return { added: estimated, deleted: estimated };
-    }
-  } catch {
-    // Fallback to simple string comparison
-    const lengthDiff = newContent.length - oldContent.length;
-    if (lengthDiff > 0) {
-      return { added: lengthDiff, deleted: 0 };
-    } else if (lengthDiff < 0) {
-      return { added: 0, deleted: Math.abs(lengthDiff) };
-    } else {
-      return { added: 0, deleted: 0 };
-    }
+  if (oldContent === newContent) {
+    return { added: 0, deleted: 0 };
   }
+  
+  // Use diff-match-patch for accurate character-level diffing
+  const dmp = new DiffMatchPatch();
+  const diffs = dmp.diff_main(oldContent, newContent);
+  dmp.diff_cleanupSemantic(diffs);
+  
+  let added = 0;
+  let deleted = 0;
+  
+  // Count added and deleted characters from diff results
+  // Diff format: [[-1, "deleted text"], [1, "added text"], [0, "unchanged text"]]
+  for (const [operation, text] of diffs) {
+    if (operation === 1) {
+      // Added text
+      added += (text as string).length;
+    } else if (operation === -1) {
+      // Deleted text
+      deleted += (text as string).length;
+    }
+    // operation === 0 means unchanged, skip it
+  }
+  
+  return { added, deleted };
 }
 
 /**
- * Render a line-by-line diff between old and new content.
- * Lines prefixed with + are additions, - are deletions.
+ * Render a diff between old and new content using diff-match-patch.
+ * Returns an array of diff segments with operation type and text.
  */
-function renderDiff(oldContent: string, newContent: string): string {
-  if (!oldContent) return newContent;
-  if (!newContent) return '';
-  
-  const oldLines = oldContent.split('\n');
-  const newLines = newContent.split('\n');
-  const diff: string[] = [];
-  
-  const maxLines = Math.max(oldLines.length, newLines.length);
-  for (let i = 0; i < maxLines; i++) {
-    const oldLine = oldLines[i];
-    const newLine = newLines[i];
-    
-    if (oldLine === newLine) {
-      diff.push(` ${newLine || ''}`);
-    } else {
-      if (oldLine) diff.push(`-${oldLine}`);
-      if (newLine) diff.push(`+${newLine}`);
-    }
+function renderDiff(oldContent: string, newContent: string): Array<{ operation: number; text: string }> {
+  if (!oldContent) {
+    return [{ operation: 1, text: newContent }];
   }
   
-  return diff.join('\n');
+  if (!newContent) {
+    return [{ operation: -1, text: oldContent }];
+  }
+  
+  // Use diff-match-patch for accurate diffing
+  const dmp = new DiffMatchPatch();
+  const diffs = dmp.diff_main(oldContent, newContent);
+  dmp.diff_cleanupSemantic(diffs);
+  
+  // Convert to our format: [{ operation: -1|0|1, text: string }]
+  return diffs.map(([operation, text]: [number, string]) => ({ operation, text }));
 }
 
 export function Timeline({ history, onRollback, getPastState }: TimelineProps) {
@@ -260,18 +250,45 @@ export function Timeline({ history, onRollback, getPastState }: TimelineProps) {
                 <div className="mt-3 p-3 bg-muted rounded-md text-xs font-mono overflow-x-auto">
                   <div className="whitespace-pre-wrap">
                     {prevContent ? (
-                      renderDiff(prevContent, content).split('\n').map((line, i) => (
-                        <div
-                          key={i}
-                          className={cn(
-                            line.startsWith('+') && 'text-green-600 dark:text-green-400',
-                            line.startsWith('-') && 'text-red-600 dark:text-red-400',
-                            !line.startsWith('+') && !line.startsWith('-') && 'text-muted-foreground'
-                          )}
-                        >
-                          {line}
-                        </div>
-                      ))
+                      renderDiff(prevContent, content).map((segment, i) => {
+                        if (segment.operation === 1) {
+                          // Added text - green
+                          const lines = segment.text.split('\n');
+                          return (
+                            <span
+                              key={i}
+                              className="text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-950/30"
+                            >
+                              {lines.map((line, lineIdx) => 
+                                lineIdx < lines.length - 1 ? `+${line}\n` : `+${line}`
+                              )}
+                            </span>
+                          );
+                        } else if (segment.operation === -1) {
+                          // Deleted text - red
+                          const lines = segment.text.split('\n');
+                          return (
+                            <span
+                              key={i}
+                              className="text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/30"
+                            >
+                              {lines.map((line, lineIdx) => 
+                                lineIdx < lines.length - 1 ? `-${line}\n` : `-${line}`
+                              )}
+                            </span>
+                          );
+                        } else {
+                          // Unchanged text - muted
+                          return (
+                            <span
+                              key={i}
+                              className="text-muted-foreground"
+                            >
+                              {segment.text}
+                            </span>
+                          );
+                        }
+                      })
                     ) : (
                       <div className="text-green-600 dark:text-green-400">
                         {content.split('\n').map((line, i) => (

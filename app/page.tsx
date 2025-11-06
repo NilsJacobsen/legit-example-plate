@@ -11,7 +11,9 @@ import {
   ItalicPlugin,
   UnderlinePlugin,
 } from '@platejs/basic-nodes/react';
+import { MarkdownPlugin, deserializeMd } from '@platejs/markdown';
 import { Plate, usePlateEditor } from 'platejs/react';
+import { useEffect, useRef } from 'react';
 
 import { BlockquoteElement } from '@/components/ui/blockquote-node';
 import { Editor, EditorContainer } from '@/components/ui/editor';
@@ -21,7 +23,7 @@ import { MarkToolbarButton } from '@/components/ui/mark-toolbar-button';
 import { Timeline } from '@/components/ui/timeline';
 import { ToolbarButton } from '@/components/ui/toolbar';
 import { useLegitFile } from '@legit-sdk/react';
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 
 const initialValue: Value = [
   {
@@ -43,11 +45,6 @@ const initialValue: Value = [
 ];
 
 export default function MyEditorPage() {
-  // Legit SDK: Get file operations and history
-  const { setContent, history, getPastState } = useLegitFile("/document.txt", {
-    initialContent: JSON.stringify(initialValue),
-  });
-  
   const [editorValue, setEditorValue] = useState(initialValue);
   const isRollingBackRef = useRef(false);
 
@@ -60,9 +57,38 @@ export default function MyEditorPage() {
       H2Plugin.withComponent(H2Element),
       H3Plugin.withComponent(H3Element),
       BlockquotePlugin.withComponent(BlockquoteElement),
+      MarkdownPlugin,
     ],
     value: editorValue,
   });
+
+  // Helper function to serialize current editor value to markdown
+  const serializeToMarkdown = () => {
+    return editor.getApi(MarkdownPlugin).markdown.serialize();
+  };
+
+  // Helper function to deserialize markdown to Plate value
+  const deserializeFromMarkdown = (markdown: string) => {
+    return deserializeMd(editor, markdown);
+  };
+
+  // Legit SDK: Get file operations and history
+  // Store content as markdown for better diffing
+  const initialMarkdownRef = useRef<string | null>(null);
+  const { setContent, history, getPastState } = useLegitFile("/document.txt", {
+    initialContent: '', // Will be set after editor is ready
+  });
+
+  // Set initial content as markdown once editor is ready
+  useEffect(() => {
+    if (!initialMarkdownRef.current && editor) {
+      initialMarkdownRef.current = serializeToMarkdown();
+      if (initialMarkdownRef.current) {
+        setContent(initialMarkdownRef.current);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editor]);
 
   return (
     <Plate 
@@ -98,8 +124,9 @@ export default function MyEditorPage() {
         <ToolbarButton 
           variant="primary" 
           onClick={() => {
-            // Legit SDK: Save current editor state
-            setContent(JSON.stringify(editorValue));
+            // Legit SDK: Save current editor state as markdown
+            const markdown = serializeToMarkdown();
+            setContent(markdown);
           }}
         >
           Save
@@ -119,16 +146,17 @@ export default function MyEditorPage() {
               history={history}
               getPastState={getPastState}
               onRollback={async (oid) => {
-                // Legit SDK: Get the content from a past commit
-                const pastContent = await getPastState(oid);
-                if (pastContent) {
-                  const parsedValue = JSON.parse(pastContent);
+                // Legit SDK: Get the markdown content from a past commit
+                const pastMarkdown = await getPastState(oid);
+                if (pastMarkdown) {
+                  // Deserialize markdown to Plate value
+                  const parsedValue = deserializeFromMarkdown(pastMarkdown);
                   isRollingBackRef.current = true;
                   
                   // Update editor with past state using Plate's setValue API
                   editor.tf.setValue(parsedValue);
                   setEditorValue(parsedValue);
-                  setContent(pastContent);
+                  setContent(pastMarkdown);
                   editor.tf.focus({ edge: 'endEditor' });
                   
                   setTimeout(() => {
