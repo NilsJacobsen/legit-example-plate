@@ -21,7 +21,7 @@ import { MarkToolbarButton } from '@/components/ui/mark-toolbar-button';
 import { Timeline } from '@/components/ui/timeline';
 import { ToolbarButton } from '@/components/ui/toolbar';
 import { useLegitFile } from '@legit-sdk/react';
-import { useEffect, useState, useRef } from 'react';
+import { useState, useRef } from 'react';
 
 const initialValue: Value = [
   {
@@ -43,19 +43,13 @@ const initialValue: Value = [
 ];
 
 export default function MyEditorPage() {
-  const { content, setContent, history, getPastState } = useLegitFile("/document.txt", {
+  // Legit SDK: Get file operations and history
+  const { setContent, history, getPastState } = useLegitFile("/document.txt", {
     initialContent: JSON.stringify(initialValue),
   });
+  
   const [editorValue, setEditorValue] = useState(initialValue);
   const isRollingBackRef = useRef(false);
-
-  useEffect(() => {
-    console.log(content);
-  }, [content]);
-
-  useEffect(() => {
-    console.log(history);
-  }, [history]);
 
   const editor = usePlateEditor({
     plugins: [
@@ -71,11 +65,15 @@ export default function MyEditorPage() {
   });
 
   return (
-    <Plate editor={editor} onChange={({ value }) => {
-      if (!isRollingBackRef.current) {
-        setEditorValue(value);
-      }
-    }}>
+    <Plate 
+      editor={editor} 
+      onChange={({ value }) => {
+        // Prevent onChange from overwriting during rollback
+        if (!isRollingBackRef.current) {
+          setEditorValue(value);
+        }
+      }}
+    >
       <FixedToolbar className="flex gap-1 justify-between rounded-t-lg p-2">
         <div className="flex gap-1">
           <ToolbarButton onClick={() => editor.tf.h1.toggle()}>H1</ToolbarButton>
@@ -97,9 +95,13 @@ export default function MyEditorPage() {
           </MarkToolbarButton>
         </div>
         
-        <ToolbarButton variant="primary" onClick={() => {
-          setContent(JSON.stringify(editorValue));
-        }}>
+        <ToolbarButton 
+          variant="primary" 
+          onClick={() => {
+            // Legit SDK: Save current editor state
+            setContent(JSON.stringify(editorValue));
+          }}
+        >
           Save
         </ToolbarButton>
       </FixedToolbar>
@@ -114,25 +116,21 @@ export default function MyEditorPage() {
         <div className="h-[180px] overflow-y-auto">
           {history && history.length > 0 ? (
             <Timeline 
-              history={history} 
+              history={history}
+              getPastState={getPastState}
               onRollback={async (oid) => {
+                // Legit SDK: Get the content from a past commit
                 const pastContent = await getPastState(oid);
                 if (pastContent) {
                   const parsedValue = JSON.parse(pastContent);
                   isRollingBackRef.current = true;
                   
-                  // Use Plate's setValue method to update the editor content
-                  // This is the recommended way to make external changes to editor content
+                  // Update editor with past state using Plate's setValue API
                   editor.tf.setValue(parsedValue);
-                  
-                  // Update state to match
                   setEditorValue(parsedValue);
                   setContent(pastContent);
-                  
-                  // Focus the editor at the end
                   editor.tf.focus({ edge: 'endEditor' });
                   
-                  // Reset flag after a moment
                   setTimeout(() => {
                     isRollingBackRef.current = false;
                   }, 100);
