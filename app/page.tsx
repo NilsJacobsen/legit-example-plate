@@ -21,7 +21,7 @@ import { MarkToolbarButton } from '@/components/ui/mark-toolbar-button';
 import { Timeline } from '@/components/ui/timeline';
 import { ToolbarButton } from '@/components/ui/toolbar';
 import { useLegitFile } from '@legit-sdk/react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 
 const initialValue: Value = [
   {
@@ -43,6 +43,20 @@ const initialValue: Value = [
 ];
 
 export default function MyEditorPage() {
+  const { content, setContent, history, getPastState } = useLegitFile("/document.txt", {
+    initialContent: JSON.stringify(initialValue),
+  });
+  const [editorValue, setEditorValue] = useState(initialValue);
+  const isRollingBackRef = useRef(false);
+
+  useEffect(() => {
+    console.log(content);
+  }, [content]);
+
+  useEffect(() => {
+    console.log(history);
+  }, [history]);
+
   const editor = usePlateEditor({
     plugins: [
       BoldPlugin,
@@ -53,24 +67,14 @@ export default function MyEditorPage() {
       H3Plugin.withComponent(H3Element),
       BlockquotePlugin.withComponent(BlockquoteElement),
     ],
-    value: initialValue,
+    value: editorValue,
   });
-  const { content, setContent, history } = useLegitFile("/document.txt", {
-    initialContent: JSON.stringify(initialValue),
-  });
-  const [editorValue, setEditorValue] = useState(initialValue);
-
-  useEffect(() => {
-    console.log(content);
-  }, [content]);
-
-  useEffect(() => {
-    console.log(history);
-  }, [history]);
 
   return (
     <Plate editor={editor} onChange={({ value }) => {
-      setEditorValue(value);
+      if (!isRollingBackRef.current) {
+        setEditorValue(value);
+      }
     }}>
       <FixedToolbar className="flex gap-1 justify-between rounded-t-lg p-2">
         <div className="flex gap-1">
@@ -109,7 +113,32 @@ export default function MyEditorPage() {
         <h3 className="text-sm font-semibold mb-4">History</h3>
         <div className="h-[180px] overflow-y-auto">
           {history && history.length > 0 ? (
-            <Timeline history={history} />
+            <Timeline 
+              history={history} 
+              onRollback={async (oid) => {
+                const pastContent = await getPastState(oid);
+                if (pastContent) {
+                  const parsedValue = JSON.parse(pastContent);
+                  isRollingBackRef.current = true;
+                  
+                  // Use Plate's setValue method to update the editor content
+                  // This is the recommended way to make external changes to editor content
+                  editor.tf.setValue(parsedValue);
+                  
+                  // Update state to match
+                  setEditorValue(parsedValue);
+                  setContent(pastContent);
+                  
+                  // Focus the editor at the end
+                  editor.tf.focus({ edge: 'endEditor' });
+                  
+                  // Reset flag after a moment
+                  setTimeout(() => {
+                    isRollingBackRef.current = false;
+                  }, 100);
+                }
+              }}
+            />
           ) : (
             <div className="text-sm text-muted-foreground">No history yet</div>
           )}
