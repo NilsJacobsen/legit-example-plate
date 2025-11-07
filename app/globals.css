@@ -126,3 +126,10 @@
     @apply bg-background text-foreground;
   }
 }
+
+.slate-editor {
+  @media (max-width: 639px) {
+    padding-right: 16px;
+    padding-left: 16px;
+  }
+}

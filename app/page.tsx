@@ -115,7 +115,7 @@ export default function MyEditorPage() {
         }
       }}
     >
-      <FixedToolbar className="flex gap-1 justify-between rounded-t-lg p-2">
+      <FixedToolbar className="flex gap-1 justify-between rounded-t-lg sm:p-2">
         <div className="flex gap-1">
           <ToolbarButton onClick={() => editor.tf.h1.toggle()}>H1</ToolbarButton>
           <ToolbarButton onClick={() => editor.tf.h2.toggle()}>H2</ToolbarButton>

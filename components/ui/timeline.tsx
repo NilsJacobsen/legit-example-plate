@@ -213,7 +213,7 @@ export function Timeline({ history, onRollback, getPastState, activeCommitOid }:
             <div className="flex-1 pb-4 min-w-0">
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
+                  <div className="flex sm:items-center gap-2 flex-col sm:flex-row">
                     <div className="text-sm font-medium">{commit.message.trim()}</div>
                     <div className="flex items-center gap-1">
                       {isLatest && <Tag>Latest</Tag>}
