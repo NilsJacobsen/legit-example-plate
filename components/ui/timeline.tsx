@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type ReactNode } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { DiffMatchPatch } from 'diff-match-patch-ts';
 import { cn } from '@/lib/utils';
@@ -17,12 +17,31 @@ interface Commit {
 }
 
 interface TimelineProps {
-  /** Array of commits from useLegitFile hook, ordered newest first */
   history: Commit[];
-  /** Callback to rollback to a specific commit */
   onRollback: (oid: string) => void;
   /** Function from useLegitFile to retrieve content from a past commit */
   getPastState: (oid: string) => Promise<string | null>;
+  /** Currently active commit oid (e.g. rolled back target) */
+  activeCommitOid?: string | null;
+}
+
+function Tag({ children, variant = 'default', href }: { children: ReactNode; variant?: 'default' | 'outline'; href?: string }) {
+  const classes = cn(
+    'inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium tracking-wide uppercase',
+    variant === 'outline'
+      ? 'border border-border text-muted-foreground'
+      : 'bg-primary/10 text-primary'
+  );
+
+  if (href) {
+    return (
+      <a className={classes} href={href}>
+        {children}
+      </a>
+    );
+  }
+
+  return <span className={classes}>{children}</span>;
 }
 
 /**
@@ -88,7 +107,7 @@ function renderDiff(oldContent: string, newContent: string): Array<{ operation: 
   return diffs.map(([operation, text]: [number, string]) => ({ operation, text }));
 }
 
-export function Timeline({ history, onRollback, getPastState }: TimelineProps) {
+export function Timeline({ history, onRollback, getPastState, activeCommitOid }: TimelineProps) {
   const [expandedCommits, setExpandedCommits] = useState<Set<string>>(new Set());
   const [commitContents, setCommitContents] = useState<Record<string, string>>({});
   const [commitDiffs, setCommitDiffs] = useState<Record<string, { added: number; deleted: number }>>({});
@@ -177,8 +196,11 @@ export function Timeline({ history, onRollback, getPastState }: TimelineProps) {
         const prevCommit = index < history.length - 1 ? history[index + 1] : null;
         const prevContent = prevCommit ? commitContents[prevCommit.oid] : null;
         
+        const isLatest = index === 0;
+        const isActive = activeCommitOid === commit.oid;
+
         return (
-          <div key={commit.oid} className="flex gap-4">
+          <div key={commit.oid} id={`commit-${commit.oid}`} className="flex gap-4">
             {/* Timeline indicator */}
             <div className="flex flex-col items-center">
               <div className="w-2 h-2 rounded-full bg-foreground shrink-0 mt-1.5" />
@@ -191,7 +213,17 @@ export function Timeline({ history, onRollback, getPastState }: TimelineProps) {
             <div className="flex-1 pb-4 min-w-0">
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium">{commit.message.trim()}</div>
+                  <div className="flex items-center gap-2">
+                    <div className="text-sm font-medium">{commit.message.trim()}</div>
+                    <div className="flex items-center gap-1">
+                      {isLatest && <Tag>Latest</Tag>}
+                      {isActive && !isLatest && (
+                        <Tag variant="outline" href={`#commit-${commit.oid}`}>
+                          Rolled back
+                        </Tag>
+                      )}
+                    </div>
+                  </div>
                   <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2 flex-wrap">
                     <span>
                       {commit.author.name} • {formatDate(commit.author.timestamp)} at{' '}

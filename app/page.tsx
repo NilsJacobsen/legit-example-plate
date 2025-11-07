@@ -47,6 +47,7 @@ const initialValue: Value = [
 export default function MyEditorPage() {
   const [editorValue, setEditorValue] = useState(initialValue);
   const isRollingBackRef = useRef(false);
+  const [activeCommitOid, setActiveCommitOid] = useState<string | null>(null);
 
   const editor = usePlateEditor({
     plugins: [
@@ -78,6 +79,20 @@ export default function MyEditorPage() {
   const { setContent, history, getPastState } = useLegitFile("/document.txt", {
     initialContent: '', // Will be set after editor is ready
   });
+
+  // Reset active commit if it falls out of history (e.g., history updated)
+  useEffect(() => {
+    if (!activeCommitOid) return;
+    if (!history || history.length === 0) {
+      setActiveCommitOid(null);
+      return;
+    }
+
+    const exists = history.some(commit => commit.oid === activeCommitOid);
+    if (!exists) {
+      setActiveCommitOid(null);
+    }
+  }, [history, activeCommitOid]);
 
   // Set initial content as markdown once editor is ready
   useEffect(() => {
@@ -145,6 +160,7 @@ export default function MyEditorPage() {
             <Timeline 
               history={history}
               getPastState={getPastState}
+              activeCommitOid={activeCommitOid}
               onRollback={async (oid) => {
                 // Legit SDK: Get the markdown content from a past commit
                 const pastMarkdown = await getPastState(oid);
@@ -158,6 +174,8 @@ export default function MyEditorPage() {
                   setEditorValue(parsedValue);
                   setContent(pastMarkdown);
                   editor.tf.focus({ edge: 'endEditor' });
+
+                  setActiveCommitOid(oid);
                   
                   setTimeout(() => {
                     isRollingBackRef.current = false;
