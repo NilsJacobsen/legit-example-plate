@@ -1,4 +1,5 @@
-# Legit meets Plate - versioning for Rich Text Editors
+# Legit meets Plate
+## Versioning for Rich Text Editors
 
 https://github.com/user-attachments/assets/e4e8a0ce-02cf-4bde-8a5e-ab852a2cee86
 
