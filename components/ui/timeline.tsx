@@ -245,26 +245,14 @@ export function Timeline({ history, onRollback, getPastState, activeCommitOid }:
                 {/* Action buttons */}
                 <div className="flex items-center gap-2 shrink-0">
                   <button
-                    className={cn(
-                      "inline-flex items-center justify-center rounded-md text-sm font-medium",
-                      "h-8 px-1.5 border border-input bg-transparent",
-                      "hover:bg-accent hover:text-accent-foreground",
-                      "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-                      "transition-colors"
-                    )}
+                    className="inline-flex items-center justify-center rounded-md text-sm font-medium h-8 px-1.5 border border-input bg-transparent hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-colors"
                     onClick={() => onRollback(commit.oid)}
                   >
                     Rollback
                   </button>
                   <button
                     type="button"
-                    className={cn(
-                      "inline-flex items-center justify-center rounded-md text-sm",
-                      "h-8 w-8 p-0 border border-transparent bg-transparent",
-                      "hover:bg-accent/60 hover:text-accent-foreground",
-                      "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-                      "transition-colors"
-                    )}
+                    className="inline-flex items-center justify-center rounded-md text-sm h-8 w-8 p-0 border border-transparent bg-transparent hover:bg-accent/60 hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-colors"
                     onClick={() => toggleCommit(commit.oid)}
                     aria-label={isExpanded ? "Collapse diff" : "Expand diff"}
                   >
