@@ -203,14 +203,14 @@ export function Timeline({ history, onRollback, getPastState, activeCommitOid }:
           <div key={commit.oid} id={`commit-${commit.oid}`} className="flex gap-4">
             {/* Timeline indicator */}
             <div className="flex flex-col items-center">
-              <div className="w-2 h-2 rounded-full bg-foreground shrink-0 mt-1.5" />
+              <div className="w-2 h-2 rounded-full shrink-0 mt-1.5 bg-legit-orange" />
               {index < history.length - 1 && (
-                <div className="w-px flex-1 min-h-4 bg-border mt-1" />
+                <div className="w-px flex-1 min-h-4 bg-gray-300 mt-1" />
               )}
             </div>
             
             {/* Commit content */}
-            <div className="flex-1 pb-4 min-w-0">
+            <div className="flex-1 pb-4 min-w-0 pl-4">
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">
                   <div className="flex sm:items-center gap-2 flex-col sm:flex-row">
@@ -232,10 +232,10 @@ export function Timeline({ history, onRollback, getPastState, activeCommitOid }:
                     {diff && (
                       <span className="flex items-center gap-2 ml-2">
                         {diff.added > 0 && (
-                          <span className="text-green-600 dark:text-green-400">+{diff.added}</span>
+                          <span className="text-green-600">+{diff.added}</span>
                         )}
                         {diff.deleted > 0 && (
-                          <span className="text-red-600 dark:text-red-400">-{diff.deleted}</span>
+                          <span className="text-red-600">-{diff.deleted}</span>
                         )}
                       </span>
                     )}
@@ -245,7 +245,7 @@ export function Timeline({ history, onRollback, getPastState, activeCommitOid }:
                 {/* Action buttons */}
                 <div className="flex items-center gap-2 shrink-0">
                   <button
-                    className="inline-flex items-center justify-center rounded-md text-sm font-medium h-8 px-1.5 border border-input bg-transparent hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-colors"
+                    className="inline-flex items-center justify-center rounded-md text-sm font-medium h-8 px-1.5 border border-legit-orange text-legit-orange bg-transparent hover:bg-legit-orange hover:text-white focus-visible:ring-2 focus-visible:ring-legit-orange focus-visible:ring-offset-2 transition-colors"
                     onClick={() => onRollback(commit.oid)}
                   >
                     Rollback
@@ -277,7 +277,7 @@ export function Timeline({ history, onRollback, getPastState, activeCommitOid }:
                           return (
                             <span
                               key={i}
-                              className="text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-950/30"
+                              className="text-green-600 bg-green-50"
                             >
                               {lines.map((line, lineIdx) => 
                                 lineIdx < lines.length - 1 ? `+${line}\n` : `+${line}`
@@ -290,7 +290,7 @@ export function Timeline({ history, onRollback, getPastState, activeCommitOid }:
                           return (
                             <span
                               key={i}
-                              className="text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/30"
+                              className="text-red-600 bg-red-50"
                             >
                               {lines.map((line, lineIdx) => 
                                 lineIdx < lines.length - 1 ? `-${line}\n` : `-${line}`
@@ -310,7 +310,7 @@ export function Timeline({ history, onRollback, getPastState, activeCommitOid }:
                         }
                       })
                     ) : (
-                      <div className="text-green-600 dark:text-green-400">
+                      <div className="text-green-600">
                         {content.split('\n').map((line, i) => (
                           <div key={i}>+{line}</div>
                         ))}
