@@ -22,7 +22,7 @@ import { H1Element, H2Element, H3Element } from '@/components/ui/heading-node';
 import { MarkToolbarButton } from '@/components/ui/mark-toolbar-button';
 import { Timeline } from '@/components/ui/timeline';
 import { ToolbarButton } from '@/components/ui/toolbar';
-import { useLegitFile } from '@legit-sdk/react';
+import { useLegitContext, useLegitFile } from '@legit-sdk/react';
 import { useState } from 'react';
 
 const initialValue: Value = [
@@ -76,8 +76,9 @@ export default function MyEditorPage() {
   // Legit SDK: Get file operations and history
   // Store content as markdown for better diffing
   const initialMarkdownRef = useRef<string | null>(null);
-  const { setContent, history, getPastState } = useLegitFile("/document.txt", {
-    initialContent: '', // Will be set after editor is ready
+  const { rollback } = useLegitContext();
+  const { setData, history, getPastState } = useLegitFile("/document.txt", {
+    initialData: '', // Will be set after editor is ready
   });
 
   // Reset active commit if it falls out of history (e.g., history updated)
@@ -99,7 +100,7 @@ export default function MyEditorPage() {
     if (!initialMarkdownRef.current && editor) {
       initialMarkdownRef.current = serializeToMarkdown();
       if (initialMarkdownRef.current) {
-        setContent(initialMarkdownRef.current);
+        setData(initialMarkdownRef.current);
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -141,7 +142,7 @@ export default function MyEditorPage() {
           onClick={() => {
             // Legit SDK: Save current editor state as markdown
             const markdown = serializeToMarkdown();
-            setContent(markdown);
+            setData(markdown);
           }}
         >
           Save
@@ -162,6 +163,7 @@ export default function MyEditorPage() {
               getPastState={getPastState}
               activeCommitOid={activeCommitOid}
               onRollback={async (oid) => {
+                await rollback(oid);
                 // Legit SDK: Get the markdown content from a past commit
                 const pastMarkdown = await getPastState(oid);
                 if (pastMarkdown) {
@@ -172,10 +174,7 @@ export default function MyEditorPage() {
                   // Update editor with past state using Plate's setValue API
                   editor.tf.setValue(parsedValue);
                   setEditorValue(parsedValue);
-                  setContent(pastMarkdown);
                   editor.tf.focus({ edge: 'endEditor' });
-
-                  setActiveCommitOid(oid);
                   
                   setTimeout(() => {
                     isRollingBackRef.current = false;

@@ -9,8 +9,8 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "@legit-sdk/core": "^0.1.9",
-    "@legit-sdk/react": "^0.1.9",
+    "@legit-sdk/core": "^0.2.0",
+    "@legit-sdk/react": "^0.2.0",
     "@platejs/basic-nodes": "^51.0.0",
     "@platejs/markdown": "^51.0.0",
     "@radix-ui/react-dropdown-menu": "^2.1.16",
