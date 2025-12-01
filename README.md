@@ -1,4 +1,10 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Legit meets Plate
+Versioning for Rich Text Editors
+
+- [Deployed Example](https://legit-example-plate.vercel.app/) - See the example in action
+- [Documentation](https://www.legitcontrol.com/docs/examples/react-starter) - Legit SDK React Docs
+
+https://github.com/user-attachments/assets/e4e8a0ce-02cf-4bde-8a5e-ab852a2cee86
 
 ## Getting Started
 
