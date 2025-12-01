@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import fs from "memfs";
-import { initLegitFs, HistoryItem } from "@legit-sdk/core";
+import { openLegitFs, HistoryItem } from "@legit-sdk/core";
 import Image from "next/image";
 import Link from "next/link";
 import type { Value } from 'platejs';
@@ -49,8 +49,7 @@ const initialValue: Value = [
 ];
 
 export default function Home() {
-  const [legitFs, setLegitFs] = useState<Awaited<ReturnType<typeof initLegitFs>> | null>(null);
-  const [markdown, setMarkdown] = useState(INITIAL_MARKDOWN);
+  const [legitFs, setLegitFs] = useState<Awaited<ReturnType<typeof openLegitFs>> | null>(null);
   const [history, setHistory] = useState<(HistoryItem & { oldContent: string; newContent: string })[]>([]);
   const [checkoutOid, setCheckoutOid] = useState<string | null>(null);
   const headRef = useRef<string | null>(null);
@@ -100,7 +99,6 @@ export default function Home() {
       isRollingBackRef.current = true;
       editor.tf.setValue(parsedValue);
       setEditorValue(parsedValue);
-      setMarkdown(content);
       setCheckoutOid(oid);
       editor.tf.focus({ edge: 'endEditor' });
       setTimeout(() => {
@@ -133,7 +131,10 @@ export default function Home() {
     const initFs = async () => {
       try {
         if (!legitFs) {
-          const _legitFs = await initLegitFs(fs as unknown as typeof import("node:fs"), "/");
+          const _legitFs = await openLegitFs({
+            storageFs: fs as unknown as typeof import("node:fs"),
+            gitRoot: "/",
+          });
           await _legitFs.promises.writeFile(`/.legit/branches/main/${FILE_NAME}`, INITIAL_MARKDOWN);
           setLegitFs(_legitFs);
         }
@@ -197,7 +198,6 @@ export default function Home() {
           const latest = enriched[0];
           const parsedValue = deserializeFromMarkdown(latest.newContent);
           setEditorValue(parsedValue);
-          setMarkdown(latest.newContent);
         }
       } catch (e) {
         console.error("Not able to update history state: ", e)
